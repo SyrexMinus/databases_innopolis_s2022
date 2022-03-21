@@ -1,0 +1,16 @@
+entity set,has a relationship with,has an attribute that is,is a specialization of,is a generalization of,entity set or attribute
+mother,,,+,,person
+daughter,+,,,,mother
+student,,,+,,person
+student,,+,,,student_id
+school,+,,,,student
+school,+,,,,class room
+animal,,,,+,horse
+horse,,+,,,breed
+horse,,+,,,age
+employee,,+,,,ssn
+furniture,,,,+,chair
+chair,,+,,,weight
+human,,,,+,woman
+soldier,,,+,,person
+enemy combatant,,,+,,person
