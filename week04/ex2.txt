@@ -1,4 +1,4 @@
 1. Find the snames of suppliers who supply some red parts for cost less than 100.
-2. Find the snames of suppliers who supply some red or green parts for cost less than 100
-3. Find the sids of suppliers who supply some red or green parts for cost less than 100
-4. Find the snames of suppliers who supply some red or green parts for cost less than 100
+2. Find the snames of suppliers who supply some red part and some green part for cost less than 100
+3. Find the sids of suppliers who supply some red part and some green part for cost less than 100
+4. Find the snames of suppliers who supply some red part and some green part for cost less than 100
