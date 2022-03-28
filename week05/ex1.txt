@@ -1,0 +1,51 @@
+CREATE TABLE Customer
+(
+customer_id int NOT NULL PRIMARY KEY,
+balance int,
+credit_limit int,
+discount int
+);
+CREATE TABLE Order
+(
+order_id int NOT NULL PRIMARY KEY,
+date timestamp,
+placer_customer int REFERENCES Customer(customer_id) NOT NULL,
+shipping_address int REFERENCES ShippingAddress(shipping_address_id) NOT NULL
+);
+CREATE TABLE Item
+(
+item_id int NOT NULL PRIMARY KEY,
+description char(200)
+);
+CREATE TABLE Manufacturer
+(
+manufacturer_id int NOT NULL PRIMARY KEY,
+phone_number char(30)
+);
+CREATE TABLE ShippingAddress
+(
+shipping_address_id int NOT NULL PRIMARY KEY,
+house_number int,
+street char(30),
+distinct char(30),
+city char(30)
+);
+CREATE TABLE CustomerShippingAddress
+(
+customer int REFERENCES Customer(customer_id) NOT NULL PRIMARY KEY,
+shipping_address int REFERENCES ShippingAddress(shipping_address_id) NOT NULL PRIMARY KEY
+);
+CREATE TABLE OrderIncludesItem
+(
+order_includes_item_id int NOT NULL PRIMARY KEY,
+order int REFERENCES Order(order_id) NOT NULL,
+item int REFERENCES Item(item_id) NOT NULL,
+quantity int
+);
+CREATE TABLE ManufacturerProduceItem
+(
+manufacturer_produce_item_id int NOT NULL PRIMARY KEY,
+manufacturer int REFERENCES Manufacturer(manufacturer_id) NOT NULL,
+item int REFERENCES Item(item_id) NOT NULL,
+quantity int
+);

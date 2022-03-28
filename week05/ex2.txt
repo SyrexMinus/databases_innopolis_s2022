@@ -1,0 +1,20 @@
+CREATE TABLE Group
+(
+group_id int NOT NULL PRIMARY KEY
+);
+CREATE TABLE Company
+(
+company_id int NOT NULL PRIMARY KEY,
+owner_group int REFERENCES Group(group_id),
+structure_company int REFERENCES Company(company_id)
+);
+CREATE TABLE Plant
+(
+plant_id int NOT NULL PRIMARY KEY,
+owner_company int REFERENCES Company(company_id)
+);
+CREATE TABLE Item
+(
+item_id int NOT NULL PRIMARY KEY,
+producer_plant int REFERENCES Plant(plant_id)
+);

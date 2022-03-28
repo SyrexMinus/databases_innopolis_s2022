@@ -1,0 +1,39 @@
+CREATE TABLE Airport
+(
+IATA_code int NOT NULL PRIMARY KEY
+);
+CREATE TABLE AircraftType
+(
+type_id int NOT NULL PRIMARY KEY
+);
+CREATE TABLE DailyFlightLegCombination
+(
+DF_leg_id int NOT NULL PRIMARY KEY
+);
+CREATE TABLE FlightLeg
+(
+flight_leg_id int NOT NULL PRIMARY KEY,
+owner_filght int REFERENCES Flight(flight_num) NOT NULL,
+start_airport int REFERENCES Airport(IATA_code) NOT NULL,
+end_airport int REFERENCES Airport(IATA_code) NOT NULL
+);
+CREATE TABLE Flight
+(
+flight_num int NOT NULL PRIMARY KEY
+);
+CREATE TABLE DFLegCombinationAssignedToAircraftType
+(
+DFLCATAT_id int NOT NULL PRIMARY KEY,
+aircraft_type int REFERENCES AircraftType(type_id) NOT NULL,
+df_leg_combination int REFERENCES DailyFlightLegCombination(DF_leg_id) NOT NULL
+);
+CREATE TABLE AircraftTypeCanLandAt
+(
+type_id int REFERENCES AircraftType(type_id) NOT NULL PRIMARY KEY,
+IATA_code int REFERENCES Airport(IATA_code) NOT NULL PRIMARY KEY
+);
+CREATE TABLE FlightLegBelongsTo
+(
+DF_leg int REFERENCES DailyFlightLegCombination(DF_leg_id) NOT NULL PRIMARY KEY,
+flight_leg int REFERENCES FlightLeg(flight_leg_id) NOT NULL PRIMARY KEY
+);

@@ -1,0 +1,45 @@
+CREATE TABLE Employee
+(
+employee_id int NOT NULL PRIMARY KEY
+);
+CREATE TABLE Salesperson
+(
+salesperson_id int REFERENCES Employee(employee_id) NOT NULL PRIMARY KEY
+);
+CREATE TABLE Mechanic
+(
+mechanic_id int REFERENCES Employee(employee_id) NOT NULL PRIMARY KEY
+);
+CREATE TABLE Car
+(
+car_serial_number int NOT NULL PRIMARY KEY
+);
+CREATE TABLE Customer
+(
+customer_id int NOT NULL PRIMARY KEY
+);
+CREATE TABLE ServiceTicket
+(
+service_ticket_id int NOT NULL PRIMARY KEY,
+date timestamp,
+car_serial_number int REFERENCES Car(car_serial_number) NOT NULL,
+customer int REFERENCES Customer(customer_id) NOT NULL
+);
+CREATE TABLE ServicePart
+(
+service_part_id int NOT NULL PRIMARY KEY,
+service_ticket int REFERENCES ServiceTicket(service_ticket_id) NOT NULL,
+part_type char(50)
+);
+CREATE TABLE MechanicService
+(
+mechanic_id int REFERENCES Mechanic(mechanic_id) NOT NULL PRIMARY KEY,
+service_ticket_id int REFERENCES ServiceTicket(service_ticket_id) NOT NULL PRIMARY KEY
+);
+CREATE TABLE SellCar
+(
+salesperson int REFERENCES Salesperson(salesperson_id) NOT NULL,
+car_serial_number int REFERENCES Car(car_serial_number) NOT NULL PRIMARY KEY,
+customer int REFERENCES Customer(customer_id) NOT NULL,
+invoice char(200)
+);
