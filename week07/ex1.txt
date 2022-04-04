@@ -67,3 +67,33 @@ CREATE TABLE IF NOT EXISTS public."OrderItem"
 ALTER TABLE public."OrderItem"
     OWNER to postgres;
 
+-- Calculate the total number of items per order and the total amount to pay for the order.
+SELECT order_id, sum(quant) as items_quant, sum(quant*price) as total_cost
+FROM (
+	SELECT * 
+	FROM "OrderItem" as oi
+	INNER JOIN "Item" as i
+	ON oi.item_id = i.item_id
+) as x
+GROUP BY order_id
+
+-- Obtain the customer whose purchase in terms of money has been greater than the others
+SELECT *
+FROM (
+	SELECT customer_id, SUM(quant * price) as purchase_cost
+	FROM (
+		SELECT *
+		FROM (
+			SELECT * 
+			FROM "OrderItem" as oi
+			INNER JOIN "Item" as i
+			ON oi.item_id = i.item_id
+		) as x
+		INNER JOIN "Order" as i1
+		ON x.order_id = i1.order_id
+	) as x1
+	GROUP BY customer_id
+) as x2
+ORDER BY purchase_cost DESC
+LIMIT 1
+
