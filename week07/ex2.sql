@@ -110,3 +110,43 @@ CREATE TABLE IF NOT EXISTS public."LoanBook"
 
 ALTER TABLE public."LoanBook"
     OWNER to postgres;
+
+-- Obtain for each of the schools, the number of books that have been loaned to each publishers.
+SELECT school_id, publisher_id, count(book_name) as loaned_number
+FROM (
+	SELECT *
+	FROM (
+		SELECT *
+		FROM "LoanBook" as lb
+		INNER JOIN "Loaner" as l
+		ON l.loaner_id = lb.loaner_id
+	) as x
+	INNER JOIN "Book" as b
+	ON b.book_id = x.book_id
+) as x1
+GROUP BY school_id, publisher_id
+
+-- For each school, find the book that has been on loan the longest and the teacher in charge of it.
+SELECT y.school_id, y.teacher_id
+FROM (
+	SELECT * 
+	FROM "LoanBook" as lb
+	INNER JOIN "Loaner" as l
+	ON l.loaner_id = lb.loaner_id
+) as y
+INNER JOIN (
+	SELECT school_id, min(loan_date) as min_loan_date
+	FROM (
+		SELECT *
+		FROM (
+			SELECT *
+			FROM "LoanBook" as lb
+			INNER JOIN "Loaner" as l
+			ON l.loaner_id = lb.loaner_id
+		) as x
+		INNER JOIN "Book" as b
+		ON b.book_id = x.book_id
+	) as x1
+	GROUP BY school_id
+) as x2
+ON y.school_id=x2.school_id AND y.loan_date=x2.min_loan_date
