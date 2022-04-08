@@ -1,0 +1,156 @@
+SELECT f.title, c.name, f.film_id, f.rating
+FROM film as f, film_category as fc, category as c
+WHERE (c.name = 'Horror' OR c.name = 'Sci-Fi') AND 
+      fc.category_id=c.category_id AND 
+	  fc.film_id=f.film_id AND 
+	  (f.rating='R' OR f.rating='PG-13') AND 
+	  f.film_id NOT IN (
+		  SELECT i.film_id
+		  FROM inventory as i, rental as r
+		  WHERE r.inventory_id=i.inventory_id
+	  )
+
+SELECT store_sum.store_id
+FROM (
+        SELECT a.city_id, MAX(x.money) as max_money
+        FROM (
+        SELECT store.store_id, SUM(sm.money) as money
+        FROM (
+                SELECT p.staff_id, SUM(p.amount) as money
+                FROM payment as p, 
+                    (
+                        SELECT EXTRACT(MONTH FROM payment_date) as last_month, 
+                            EXTRACT(YEAR FROM payment_date) as last_year
+                        FROM payment
+                        ORDER BY payment_date DESC
+                        LIMIT 1
+                ) as last
+                WHERE EXTRACT(MONTH FROM p.payment_date)=last.last_month AND 
+                    EXTRACT(YEAR FROM p.payment_date)=last.last_year
+                GROUP BY p.staff_id
+            ) as sm, 
+            staff, 
+            store
+        WHERE store.store_id=staff.store_id AND sm.staff_id=staff.staff_id
+        GROUP BY store.store_id
+        ) as x, store as s, address as a
+    WHERE x.store_id=s.store_id AND s.address_id=a.address_id
+    GROUP BY a.city_id
+    ) as city_max,
+    (
+        SELECT store.store_id, SUM(sm.money) as money
+        FROM (
+                SELECT p.staff_id, SUM(p.amount) as money
+                FROM payment as p, 
+                    (
+                        SELECT EXTRACT(MONTH FROM payment_date) as last_month, 
+                            EXTRACT(YEAR FROM payment_date) as last_year
+                        FROM payment
+                        ORDER BY payment_date DESC
+                        LIMIT 1
+                ) as last
+                WHERE EXTRACT(MONTH FROM p.payment_date)=last.last_month AND 
+                    EXTRACT(YEAR FROM p.payment_date)=last.last_year
+                GROUP BY p.staff_id
+            ) as sm, 
+            staff, 
+            store
+        WHERE store.store_id=staff.store_id AND sm.staff_id=staff.staff_id
+        GROUP BY store.store_id
+        ) as store_sum, store, address
+WHERE store_sum.money=city_max.max_money AND
+    store_sum.store_id=store.store_id AND 
+    store.address_id=address.address_id AND 
+    address.city_id=city_max.city_id
+
+Explain for the first query:
+"Hash Join  (cost=542.92..615.36 rows=23 width=91)"
+"  Hash Cond: (f.film_id = fc.film_id)"
+"  ->  Seq Scan on film f  (cost=520.78..592.28 rows=187 width=23)"
+"        Filter: ((NOT (hashed SubPlan 1)) AND ((rating = 'R'::mpaa_rating) OR (rating = 'PG-13'::mpaa_rating)))"
+"        SubPlan 1"
+"          ->  Hash Join  (cost=128.07..480.67 rows=16044 width=2)"
+"                Hash Cond: (r.inventory_id = i.inventory_id)"
+"                ->  Seq Scan on rental r  (cost=0.00..310.44 rows=16044 width=4)"
+"                ->  Hash  (cost=70.81..70.81 rows=4581 width=6)"
+"                      ->  Seq Scan on inventory i  (cost=0.00..70.81 rows=4581 width=6)"
+"  ->  Hash  (cost=20.58..20.58 rows=125 width=70)"
+"        ->  Hash Join  (cost=1.26..20.58 rows=125 width=70)"
+"              Hash Cond: (fc.category_id = c.category_id)"
+"              ->  Seq Scan on film_category fc  (cost=0.00..16.00 rows=1000 width=4)"
+"              ->  Hash  (cost=1.24..1.24 rows=2 width=72)"
+"                    ->  Seq Scan on category c  (cost=0.00..1.24 rows=2 width=72)"
+"                          Filter: (((name)::text = 'Horror'::text) OR ((name)::text = 'Sci-Fi'::text))"
+The most expensive step is the most outer HASH JOIN with cost 542.92..615.36. The solution to it might be creating hash Index for the film(film_d), since it will speed up equal operation which is used in "Hash Cond".
+
+Explain for the second query:
+"Nested Loop  (cost=1613.71..1622.89 rows=1 width=4)"
+"  Join Filter: (store.address_id = address.address_id)"
+"  ->  Nested Loop  (cost=1613.44..1614.58 rows=1 width=8)"
+"        Join Filter: (store_2.store_id = store.store_id)"
+"        ->  Nested Loop  (cost=1613.44..1613.54 rows=1 width=6)"
+"              Join Filter: ((max((sum((sum(p.amount)))))) = (sum((sum(p_1.amount)))))"
+"              ->  GroupAggregate  (cost=811.43..811.45 rows=1 width=34)"
+"                    Group Key: a.city_id"
+"                    ->  Sort  (cost=811.43..811.44 rows=1 width=34)"
+"                          Sort Key: a.city_id"
+"                          ->  Nested Loop  (cost=802.28..811.42 rows=1 width=34)"
+"                                ->  Nested Loop  (cost=802.01..803.11 rows=1 width=34)"
+"                                      Join Filter: (store_1.store_id = s.store_id)"
+"                                      ->  GroupAggregate  (cost=802.01..802.05 rows=1 width=36)"
+"                                            Group Key: store_1.store_id"
+"                                            ->  Merge Join  (cost=802.01..802.03 rows=1 width=36)"
+"                                                  Merge Cond: (staff.store_id = store_1.store_id)"
+"                                                  ->  Sort  (cost=800.98..800.98 rows=1 width=34)"
+"                                                        Sort Key: staff.store_id"
+"                                                        ->  Nested Loop  (cost=799.89..800.97 rows=1 width=34)"
+"                                                              Join Filter: (p.staff_id = staff.staff_id)"
+"                                                              ->  GroupAggregate  (cost=799.89..799.91 rows=1 width=34)"
+"                                                                    Group Key: p.staff_id"
+"                                                                    ->  Sort  (cost=799.89..799.89 rows=1 width=8)"
+"                                                                          Sort Key: p.staff_id"
+"                                                                          ->  Hash Join  (cost=399.95..799.88 rows=1 width=8)"
+"                                                                                Hash Cond: ((date_part('month'::text, p.payment_date) = last.last_month) AND (date_part('year'::text, p.payment_date) = last.last_year))"
+"                                                                                ->  Seq Scan on payment p  (cost=0.00..253.96 rows=14596 width=16)"
+"                                                                                ->  Hash  (cost=399.93..399.93 rows=1 width=16)"
+"                                                                                      ->  Subquery Scan on last  (cost=399.92..399.93 rows=1 width=16)"
+"                                                                                            ->  Limit  (cost=399.92..399.92 rows=1 width=24)"
+"                                                                                                  ->  Sort  (cost=399.92..436.41 rows=14596 width=24)"
+"                                                                                                        Sort Key: payment.payment_date DESC"
+"                                                                                                        ->  Seq Scan on payment  (cost=0.00..326.94 rows=14596 width=24)"
+"                                                              ->  Seq Scan on staff  (cost=0.00..1.02 rows=2 width=6)"
+"                                                  ->  Sort  (cost=1.03..1.03 rows=2 width=4)"
+"                                                        Sort Key: store_1.store_id"
+"                                                        ->  Seq Scan on store store_1  (cost=0.00..1.02 rows=2 width=4)"
+"                                      ->  Seq Scan on store s  (cost=0.00..1.02 rows=2 width=6)"
+"                                ->  Index Scan using address_pkey on address a  (cost=0.28..8.29 rows=1 width=6)"
+"                                      Index Cond: (address_id = s.address_id)"
+"              ->  GroupAggregate  (cost=802.01..802.05 rows=1 width=36)"
+"                    Group Key: store_2.store_id"
+"                    ->  Merge Join  (cost=802.01..802.03 rows=1 width=36)"
+"                          Merge Cond: (staff_1.store_id = store_2.store_id)"
+"                          ->  Sort  (cost=800.98..800.98 rows=1 width=34)"
+"                                Sort Key: staff_1.store_id"
+"                                ->  Nested Loop  (cost=799.89..800.97 rows=1 width=34)"
+"                                      Join Filter: (p_1.staff_id = staff_1.staff_id)"
+"                                      ->  GroupAggregate  (cost=799.89..799.91 rows=1 width=34)"
+"                                            Group Key: p_1.staff_id"
+"                                            ->  Sort  (cost=799.89..799.89 rows=1 width=8)"
+"                                                  Sort Key: p_1.staff_id"
+"                                                  ->  Hash Join  (cost=399.95..799.88 rows=1 width=8)"
+"                                                        Hash Cond: ((date_part('month'::text, p_1.payment_date) = last_1.last_month) AND (date_part('year'::text, p_1.payment_date) = last_1.last_year))"
+"                                                        ->  Seq Scan on payment p_1  (cost=0.00..253.96 rows=14596 width=16)"
+"                                                        ->  Hash  (cost=399.93..399.93 rows=1 width=16)"
+"                                                              ->  Subquery Scan on last_1  (cost=399.92..399.93 rows=1 width=16)"
+"                                                                    ->  Limit  (cost=399.92..399.92 rows=1 width=24)"
+"                                                                          ->  Sort  (cost=399.92..436.41 rows=14596 width=24)"
+"                                                                                Sort Key: payment_1.payment_date DESC"
+"                                                                                ->  Seq Scan on payment payment_1  (cost=0.00..326.94 rows=14596 width=24)"
+"                                      ->  Seq Scan on staff staff_1  (cost=0.00..1.02 rows=2 width=6)"
+"                          ->  Sort  (cost=1.03..1.03 rows=2 width=4)"
+"                                Sort Key: store_2.store_id"
+"                                ->  Seq Scan on store store_2  (cost=0.00..1.02 rows=2 width=4)"
+"        ->  Seq Scan on store  (cost=0.00..1.02 rows=2 width=6)"
+"  ->  Index Scan using idx_fk_city_id on address  (cost=0.28..8.29 rows=1 width=6)"
+"        Index Cond: (city_id = a.city_id)"
+The most expensive step is the most outer Nested Loop with cost 1613.71..1622.89. The solution for it might be creating hash Index for all the columns since it will speed up equal operations and equal operations is used very often inside of the query.
