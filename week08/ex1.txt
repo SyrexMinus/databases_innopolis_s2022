@@ -1,0 +1,56 @@
+EXPLAIN SELECT id, name, address, review FROM customer WHERE id = 999 OR id = 10001
+
+Bitmap Heap Scan on customer  (cost=8.60..16.48 rows=2 width=211)
+  Recheck Cond: ((id = 999) OR (id = 10001))
+  ->  BitmapOr  (cost=8.60..8.60 rows=2 width=0)
+        ->  Bitmap Index Scan on customer_pkey  (cost=0.00..4.30 rows=1 width=0)
+              Index Cond: (id = 999)
+        ->  Bitmap Index Scan on customer_pkey  (cost=0.00..4.30 rows=1 width=0)
+              Index Cond: (id = 10001)
+
+EXPLAIN SELECT id, name, address, review FROM customer WHERE name = 'Andrew Marquez'
+
+Seq Scan on customer  (cost=0.00..4282.00 rows=2 width=211)
+  Filter: (name = 'Andrew Marquez'::text)
+
+EXPLAIN SELECT id, name, address, review FROM customer WHERE review = 'Leg do probably newspaper cell police. We responsibility today remember own just similar those.'
+
+Seq Scan on customer  (cost=0.00..4282.00 rows=1 width=211)
+  Filter: (review = 'Leg do probably newspaper cell police. We responsibility today remember own just similar those.'::text)
+
+CREATE INDEX id_hash ON customer USING hash
+(id);
+CREATE INDEX name_hash ON customer USING hash
+(name);
+CREATE INDEX address_btree ON customer USING btree
+(address);
+CREATE INDEX review_btree ON customer USING btree
+(review);
+
+EXPLAIN SELECT id, name, address, review FROM customer WHERE id = 999 OR id = 10001
+
+Bitmap Heap Scan on customer  (cost=8.02..15.89 rows=2 width=211)
+  Recheck Cond: ((id = 999) OR (id = 10001))
+  ->  BitmapOr  (cost=8.02..8.02 rows=2 width=0)
+        ->  Bitmap Index Scan on id_hash  (cost=0.00..4.01 rows=1 width=0)
+              Index Cond: (id = 999)
+        ->  Bitmap Index Scan on id_hash  (cost=0.00..4.01 rows=1 width=0)
+              Index Cond: (id = 10001)
+
+EXPLAIN SELECT id, name, address, review FROM customer WHERE name = 'Andrew Marquez'
+
+Bitmap Heap Scan on customer  (cost=4.02..11.89 rows=2 width=211)
+  Recheck Cond: (name = 'Andrew Marquez'::text)
+  ->  Bitmap Index Scan on name_hash  (cost=0.00..4.01 rows=2 width=0)
+        Index Cond: (name = 'Andrew Marquez'::text)
+
+EXPLAIN SELECT id, name, address, review FROM customer WHERE review = 'Leg do probably newspaper cell police. We responsibility today remember own just similar those.'
+
+Index Scan using review_btree on customer  (cost=0.54..8.56 rows=1 width=211)
+  Index Cond: (review = 'Leg do probably newspaper cell police. We responsibility today remember own just similar those.'::text)
+
+For the first query difference is in cost boundaries from 8.60..16.48 to 8.02..15.89. After index insertion query become faster.
+
+For the second query difference is in cost boundaries from 0.00..4282.00 to 4.02..11.89. After index insertion query become faster.
+
+For the third query difference is in cost boundaries from 0.00..4282.00 to 0.54..8.56. After index insertion query become faster.
