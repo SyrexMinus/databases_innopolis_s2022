@@ -1,0 +1,6 @@
+CREATE OR REPLACE FUNCTION retrieve()
+RETURNS TABLE(address VARCHAR(50), city_id INTEGER)
+LANGUAGE SQL
+AS $$
+  SELECT address, city_id FROM address WHERE address LIKE '%11%' AND city_id >= 400 AND city_id <= 600
+$$;
