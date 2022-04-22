@@ -1,0 +1,106 @@
+-- Create a table of accounts. Each account should have: AuniqueID, Name, Credit, Currency
+
+-- Table: public.accounts
+
+-- DROP TABLE public.accounts;
+
+CREATE TABLE IF NOT EXISTS public.accounts
+(
+    id integer NOT NULL,
+    name text COLLATE pg_catalog."default",
+    credit real,
+    currency text COLLATE pg_catalog."default",
+    CONSTRAINT accounts_pkey PRIMARY KEY (id)
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public.accounts
+    OWNER to postgres;
+
+-- Generate and insert 3 accounts into the table, each account has 1000 Rub
+
+INSERT INTO accounts (id, name, credit, currency)
+VALUES (1, 'Xavier', 1000, 'rub');
+INSERT INTO accounts (id, name, credit, currency)
+VALUES (2, 'Hamza', 1000, 'rub');
+INSERT INTO accounts (id, name, credit, currency)
+VALUES (3, 'Darko', 1000, 'rub');
+
+-- Create Transactions:
+-- T1: Account1 send 500 RUB to Account 3
+-- T2: Account 2 send 700 RUB to Account 1
+-- T3: Account 2 send to 100 RUB to Account 3 
+-- Return Credit for all Account
+-- Create Rollback for T1, T2, T3
+
+-- start a transaction
+BEGIN;
+
+-- T1
+
+-- deduct amount from account 1
+UPDATE accounts 
+SET credit = credit - 500
+WHERE id = 1 AND currency = 'rub';
+
+-- add amount to account 2
+UPDATE accounts 
+SET credit = credit + 500
+WHERE id = 2 AND currency = 'rub';
+
+-- T2
+
+-- deduct amount from account 2
+UPDATE accounts 
+SET credit = credit - 700
+WHERE id = 2 AND currency = 'rub';
+
+-- add amount to account 2
+UPDATE accounts 
+SET credit = credit + 700
+WHERE id = 1 AND currency = 'rub';
+
+-- T3
+
+-- deduct amount from account 2
+UPDATE accounts 
+SET credit = credit - 100
+WHERE id = 2 AND currency = 'rub';
+
+-- add amount to account 2
+UPDATE accounts 
+SET credit = credit + 100
+WHERE id = 3 AND currency = 'rub';
+
+-- return accounts
+SELECT * FROM accounts;
+
+rollback;
+
+-- Add this field: BankName
+ 
+ALTER TABLE accounts
+ADD COLUMN bank_name text;
+
+-- Account 1 & 3 is SberBank, Account 2 is Tinkoff
+
+UPDATE accounts
+SET bank_name = 'SberBank'
+WHERE id = 1 OR id = 3;
+UPDATE accounts
+SET bank_name = 'Tinkoff'
+WHERE id = 2;
+
+-- Fees Should be saved in new Record (Account 4).
+
+INSERT INTO accounts (id, name, credit, currency)
+VALUES (4, 'Makar', 0, 'rub');
+
+-- Define the following conditions for each transaction. Internal transaction’s fee is 0 RUB. External transaction’s fee is 30 RUB.
+-- Create Transactions:
+-- T1: Account1 send 500 RUB to Account 3
+-- T2: Account 2 send 700 RUB to Account 1
+-- T3: Account 2 send to 100 RUB to Account 3 
+-- Return Credit for all Account
+-- Create Rollback for T1, T2, T3
