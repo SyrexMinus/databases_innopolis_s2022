@@ -18,6 +18,7 @@ TABLESPACE pg_default;
 ALTER TABLE public.accounts
     OWNER to postgres;
 
+
 -- Generate and insert 3 accounts into the table, each account has 1000 Rub
 
 INSERT INTO accounts (id, name, credit, currency)
@@ -26,6 +27,7 @@ INSERT INTO accounts (id, name, credit, currency)
 VALUES (2, 'Hamza', 1000, 'rub');
 INSERT INTO accounts (id, name, credit, currency)
 VALUES (3, 'Darko', 1000, 'rub');
+
 
 -- Create Transactions:
 -- T1: Account1 send 500 RUB to Account 3
@@ -44,10 +46,10 @@ UPDATE accounts
 SET credit = credit - 500
 WHERE id = 1 AND currency = 'rub';
 
--- add amount to account 2
+-- add amount to account 3
 UPDATE accounts 
 SET credit = credit + 500
-WHERE id = 2 AND currency = 'rub';
+WHERE id = 3 AND currency = 'rub';
 
 -- T2
 
@@ -56,7 +58,7 @@ UPDATE accounts
 SET credit = credit - 700
 WHERE id = 2 AND currency = 'rub';
 
--- add amount to account 2
+-- add amount to account 1
 UPDATE accounts 
 SET credit = credit + 700
 WHERE id = 1 AND currency = 'rub';
@@ -68,7 +70,7 @@ UPDATE accounts
 SET credit = credit - 100
 WHERE id = 2 AND currency = 'rub';
 
--- add amount to account 2
+-- add amount to account 3
 UPDATE accounts 
 SET credit = credit + 100
 WHERE id = 3 AND currency = 'rub';
@@ -78,10 +80,12 @@ SELECT * FROM accounts;
 
 rollback;
 
+
 -- Add this field: BankName
  
 ALTER TABLE accounts
 ADD COLUMN bank_name text;
+
 
 -- Account 1 & 3 is SberBank, Account 2 is Tinkoff
 
@@ -92,10 +96,12 @@ UPDATE accounts
 SET bank_name = 'Tinkoff'
 WHERE id = 2;
 
+
 -- Fees Should be saved in new Record (Account 4).
 
 INSERT INTO accounts (id, name, credit, currency)
 VALUES (4, 'Makar', 0, 'rub');
+
 
 -- Define the following conditions for each transaction. Internal transaction’s fee is 0 RUB. External transaction’s fee is 30 RUB.
 -- Create Transactions:
@@ -104,3 +110,209 @@ VALUES (4, 'Makar', 0, 'rub');
 -- T3: Account 2 send to 100 RUB to Account 3 
 -- Return Credit for all Account
 -- Create Rollback for T1, T2, T3
+
+-- start a transaction
+BEGIN;
+
+-- T1
+
+-- deduct amount from account 1
+UPDATE accounts 
+SET credit = credit - 500
+WHERE id = 1 AND currency = 'rub';
+
+-- add amount to account 3
+UPDATE accounts 
+SET credit = credit + 500 - 30
+WHERE id = 3 AND currency = 'rub';
+
+-- collect fees
+UPDATE accounts 
+SET credit = credit + 30
+WHERE id = 4 AND currency = 'rub';
+
+-- T2
+
+-- deduct amount from account 2
+UPDATE accounts 
+SET credit = credit - 700
+WHERE id = 2 AND currency = 'rub';
+
+-- add amount to account 1
+UPDATE accounts 
+SET credit = credit + 700 - 30
+WHERE id = 1 AND currency = 'rub';
+
+-- collect fees
+UPDATE accounts 
+SET credit = credit + 30
+WHERE id = 4 AND currency = 'rub';
+
+-- T3
+
+-- deduct amount from account 2
+UPDATE accounts 
+SET credit = credit - 100
+WHERE id = 2 AND currency = 'rub';
+
+-- add amount to account 3
+UPDATE accounts 
+SET credit = credit + 100 - 30
+WHERE id = 3 AND currency = 'rub';
+
+-- collect fees
+UPDATE accounts 
+SET credit = credit + 30
+WHERE id = 4 AND currency = 'rub';
+
+-- return accounts
+SELECT * FROM accounts;
+
+rollback;
+
+
+-- Create new Table Called Ledger to show all transactions: ID(unique), From (ID), To(ID), Fee (RUB), Amount (RUB), TransactionDateTime (DateTime)
+
+CREATE TABLE IF NOT EXISTS public.ledger
+(
+    id integer NOT NULL,
+    "from" integer NOT NULL,
+    FOREIGN KEY ("from") REFERENCES accounts(id),
+    "to" integer NOT NULL,
+    FOREIGN KEY ("to") REFERENCES accounts(id),
+    fee integer,
+    amount integer,
+    transaction_date_time timestamp without time zone,
+    PRIMARY KEY (id)
+);
+
+ALTER TABLE public.ledger
+    OWNER to postgres;
+
+
+-- Modify Exercise 1 & 2 To save all transaction inside this table
+
+-- Exercise 1
+
+-- start a transaction
+BEGIN;
+
+-- T1
+
+-- deduct amount from account 1
+UPDATE accounts 
+SET credit = credit - 500
+WHERE id = 1 AND currency = 'rub';
+
+-- add amount to account 3
+UPDATE accounts 
+SET credit = credit + 500
+WHERE id = 3 AND currency = 'rub';
+
+INSERT INTO ledger (id, "from", "to", fee, amount, transaction_date_time)
+VALUES (1, 1, 3, 0, 500, now());
+
+-- T2
+
+-- deduct amount from account 2
+UPDATE accounts 
+SET credit = credit - 700
+WHERE id = 2 AND currency = 'rub';
+
+-- add amount to account 1
+UPDATE accounts 
+SET credit = credit + 700
+WHERE id = 1 AND currency = 'rub';
+
+INSERT INTO ledger (id, "from", "to", fee, amount, transaction_date_time)
+VALUES (2, 2, 1, 0, 700, now());
+
+-- T3
+
+-- deduct amount from account 2
+UPDATE accounts 
+SET credit = credit - 100
+WHERE id = 2 AND currency = 'rub';
+
+-- add amount to account 3
+UPDATE accounts 
+SET credit = credit + 100
+WHERE id = 3 AND currency = 'rub';
+
+INSERT INTO ledger (id, "from", "to", fee, amount, transaction_date_time)
+VALUES (3, 2, 3, 0, 100, now());
+
+-- return accounts
+SELECT * FROM accounts;
+
+rollback;
+
+-- Exercise 2
+
+-- start a transaction
+BEGIN;
+
+-- T1
+
+-- deduct amount from account 1
+UPDATE accounts 
+SET credit = credit - 500
+WHERE id = 1 AND currency = 'rub';
+
+-- add amount to account 3
+UPDATE accounts 
+SET credit = credit + 500 - 30
+WHERE id = 3 AND currency = 'rub';
+
+-- collect fees
+UPDATE accounts 
+SET credit = credit + 30
+WHERE id = 4 AND currency = 'rub';
+
+INSERT INTO ledger (id, "from", "to", fee, amount, transaction_date_time)
+VALUES (1, 1, 3, 30, 500, now());
+
+-- T2
+
+-- deduct amount from account 2
+UPDATE accounts 
+SET credit = credit - 700
+WHERE id = 2 AND currency = 'rub';
+
+-- add amount to account 1
+UPDATE accounts 
+SET credit = credit + 700 - 30
+WHERE id = 1 AND currency = 'rub';
+
+-- collect fees
+UPDATE accounts 
+SET credit = credit + 30
+WHERE id = 4 AND currency = 'rub';
+
+INSERT INTO ledger (id, "from", "to", fee, amount, transaction_date_time)
+VALUES (2, 2, 1, 30, 700, now());
+
+-- T3
+
+-- deduct amount from account 2
+UPDATE accounts 
+SET credit = credit - 100
+WHERE id = 2 AND currency = 'rub';
+
+-- add amount to account 3
+UPDATE accounts 
+SET credit = credit + 100 - 30
+WHERE id = 3 AND currency = 'rub';
+
+-- collect fees
+UPDATE accounts 
+SET credit = credit + 30
+WHERE id = 4 AND currency = 'rub';
+
+INSERT INTO ledger (id, "from", "to", fee, amount, transaction_date_time)
+VALUES (3, 2, 3, 30, 100, now());
+
+-- return accounts
+SELECT * FROM accounts;
+
+rollback;
