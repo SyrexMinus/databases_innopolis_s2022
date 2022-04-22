@@ -123,13 +123,8 @@ WHERE id = 1 AND currency = 'rub';
 
 -- add amount to account 3
 UPDATE accounts 
-SET credit = credit + 500 - 30
+SET credit = credit + 500
 WHERE id = 3 AND currency = 'rub';
-
--- collect fees
-UPDATE accounts 
-SET credit = credit + 30
-WHERE id = 4 AND currency = 'rub';
 
 -- T2
 
@@ -261,16 +256,11 @@ WHERE id = 1 AND currency = 'rub';
 
 -- add amount to account 3
 UPDATE accounts 
-SET credit = credit + 500 - 30
+SET credit = credit + 500
 WHERE id = 3 AND currency = 'rub';
 
--- collect fees
-UPDATE accounts 
-SET credit = credit + 30
-WHERE id = 4 AND currency = 'rub';
-
 INSERT INTO ledger (id, "from", "to", fee, amount, transaction_date_time)
-VALUES (1, 1, 3, 30, 500, now());
+VALUES (1, 1, 3, 0, 500, now());
 
 -- T2
 
