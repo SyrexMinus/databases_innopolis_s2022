@@ -1,0 +1,5 @@
+// Return all middle/Walter/light weight fighters (155,170,185) who at least have one win.
+match(p1:Fighter)<-[:beats]-(p2:Fighter) where p2.weight = 170 or p2.weight = 155 or p2.weight = 185 return p2
+// Return fighters who had 1-1 record with each other. Use Count from the aggregation functions
+match(p1:Fighter)<-[:beats]-(p2:Fighter)<-[:beats]-(p1:Fighter) return p1
+// Return all fighter that can “Khabib Nurmagomedov” beat them and he didn’t have a fight with them yes.
