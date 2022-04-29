@@ -1,3 +1,4 @@
+// Using Neo4J-empty project, build a representation of the relationship between the following fighters (fighter is a Node{name,weight}, beat is a relationship)
 Create
 (p1:Fighter {name: 'Khabib Nurmagomedov',weight:155}),
 (p2:Fighter {name: 'Rafael Dos Anjos', weight:155}),
